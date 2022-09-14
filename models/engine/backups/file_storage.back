@@ -1,0 +1,69 @@
+#!/usr/bin/python3
+"""This module defines a class to manage file storage for hbnb clone"""
+import json
+import os
+from json import JSONEncoder
+from datetime import datetime
+from os.path import exists
+
+
+class DateTimeEncoder(JSONEncoder):
+
+    """ DateTimeEncoder to encode datetime objecsts to json"""
+    def default(self, o):
+
+        """ Default encoding """
+        if isinstance(o, (datetime, datetime.date)):
+            return o.isoformat()
+        return super().default(o)
+
+
+class FileStorage:
+    """This class manages storage of hbnb models in JSON format"""
+    __file_path = 'file.json'
+    __objects = {}
+
+    def all(self, cls=None):
+        """Returns a dictionary of models currently in storage"""
+        if not cls:
+            return FileStorage.__objects
+        else:
+            res = {}
+            for key, value in FileStorage.__objects.items():
+                if str(key).split(".")[0] == type(value).__name__:
+                    res[key] = value
+            return res
+
+    def new(self, obj):
+        """Adds new object to storage dictionary"""
+        FileStorage.__objects = self.all().update(
+            {obj.to_dict()['__class__'] + '.' + obj.id: obj})
+
+    def save(self):
+        """Saves storage dictionary to file"""
+        with open(FileStorage.__file_path, 'w', encoding="utf-8") as f:
+            temp = {}
+            if FileStorage.__objects:
+                temp.update(FileStorage.__objects)
+            for key, val in temp.items():
+                temp[key] = val.to_dict()
+            json.dump(temp, f)
+
+    def delete(self, obj):
+        """ Delete object """
+        print(obj)
+
+    def reload(self):
+        """Loads storage dictionary from file"""
+        if exists(FileStorage.__file_path) and os.path.getsize(
+                FileStorage.__file_path) != 0:
+            with open(FileStorage.__file_path, encoding="utf-8") as file:
+                result = json.load(file)
+                FileStorage.__objects = {}
+                for key, value in result.items():
+                    d = value.copy()
+                    cls_name = d["__class__"]
+                    del d["__class__"]
+                    self.new(eval(cls_name)(**d))
+        else:
+            return
